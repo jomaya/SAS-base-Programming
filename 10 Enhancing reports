@@ -1,0 +1,202 @@
+/*Hui Yuan*/
+/*I certify that this submission contains only my own work.*/
+
+/*01_01 Specifying Titles  Footnotes  and System Options*/
+libname orion "/courses/d0f434e5ba27fe300/s5066/prg1" access=readonly;
+proc means data=orion.order_fact;
+   var Total_Retail_Price;
+   title 'Orion Star Sales Report';
+   footnote 'Report by SAS Programming Student';
+run;
+
+title;
+footnote;
+
+/*02_02 Specifying Multiple Titles and System Options*/
+libname orion "/courses/d0f434e5ba27fe300/s5066/prg1" access=readonly;
+proc means data=orion.order_fact;
+   where Order_Type=2;
+   var Total_Retail_Price;
+   title1 'Orion Star Sales Analysis';
+   title3 'Catalog Sales Only';
+   footnote "Based on the previous day's posted data";
+run;
+
+proc means data=orion.order_fact;
+   where Order_Type=3;
+   var Total_Retail_Price;
+   title1 'Orion Star Sales Analysis';
+   title3 'Internet Sales Only';
+   footnote;
+run;
+
+
+/*03_03 Inserting Dates and Times into Titles*/
+libname orion "/courses/d0f434e5ba27fe300/s5066/prg1" access=readonly;
+%let currentdate=%sysfunc(today(),weekdate.);
+%let currenttime=%sysfunc(time(),timeampm7.);
+
+proc means data=orion.order_fact;
+   var Total_Retail_Price;
+   title "Sales Report as of &currenttime on &currentdate";
+run;
+
+/*04_01 Applying Labels and Formats in Reports*/
+libname orion "/courses/d0f434e5ba27fe300/s5066/prg1" access=readonly;
+proc print data=orion.employee_payroll(obs=10) label;
+   where Dependents=3;
+   title 'Employees with 3 Dependents';
+   var Employee_ID Salary
+       Birth_Date Employee_Hire_Date Employee_Term_Date;
+   label Employee_ID='Employee Number' Salary='Annual Salary' Birth_Date='Birth Date' 
+        Employee_Hire_Date='Hire Date' Employee_Term_Date='Termination Date';
+   format Birth_Date date11. Employee_Hire_Date date11. Employee_Term_Date date11.
+          Salary dollar10.2; 
+run;
+
+
+/*05_02 Overriding Existing Labels and Formats*/
+libname orion "/courses/d0f434e5ba27fe300/s5066/prg1" access=readonly;
+proc print data=orion.customer split='*';
+   where Country='TR';
+   title 'Customers from Turkey';
+   var Customer_ID Customer_FirstName Customer_LastName
+       Birth_Date;
+   format Birth_Date year4. Customer_FirstName $1. Customer_ID z6.;
+   label Customer_ID='Customer ID' Customer_FirstName='First*Initial'  
+         Customer_LastName='Last Name' Birth_Date='Birth Year';
+run;
+
+
+/*06_03 Applying Permanent Labels and Formats*/
+libname orion "/courses/d0f434e5ba27fe300/s5066/prg1" access=readonly;
+data otherstatus;
+   set orion.employee_payroll;
+   keep Employee_ID Employee_Hire_Date;
+   if Marital_Status='O';
+   label Employee_ID='Employee Number' Employee_Hire_Date='Hired';
+   format Employee_Hire_Date yymmddp10.;
+run;
+
+title 'Employees who are listed with Marital Status=O';
+proc print data=otherstatus label;
+run;
+
+proc contents data=otherstatus;
+run;
+
+proc freq data=otherstatus;
+   tables Employee_Hire_Date;
+   format Employee_Hire_Date yyq.;
+run;
+
+
+
+/*07_01 Creating User Defined Formats*/
+libname orion "/courses/d0f434e5ba27fe300/s5066/prg1" access=readonly;
+proc format;
+ value $gender 'F'='Female' 'M'='Male';
+ value moname 1='January' 2='February' 3='March';
+run;
+
+data Q1Birthdays;
+   set orion.employee_payroll;
+   BirthMonth=month(Birth_Date);
+   if BirthMonth le 3;
+run;
+
+proc freq data=Q1Birthdays;
+   tables BirthMonth Employee_Gender;
+   title 'Employees with Birthdays in Q1';
+   format Employee_Gender $gender. BirthMonth moname.;
+run;
+
+
+
+/*08_02 Defining Ranges in User defined Formats*/
+libname orion "/courses/d0f434e5ba27fe300/s5066/prg1" access=readonly;
+proc format;
+ value $gender 'F'='Female' 'M'='Male' other='Invalid code';
+ value salrange 0-100000='Below $100,000' 100000-500000='$100,000 or more'
+       .='missing salary' other='Invalid salary';
+run;
+
+proc print data=orion.nonsales(obs=10);
+   var Employee_ID Job_Title Salary Gender;
+   title1 'Distribution of Salary and Gender Values';
+   title2 'for Non-Sales Employees';
+   format Gender $gender. Salary salrange.;
+run;
+
+
+/*09_03 Creating a Nested Format Definition*/
+libname orion "/courses/d0f434e5ba27fe300/s5066/prg1" access=readonly;
+proc format;
+value userdate low-'31DEC2006'd=[year4.] '01JAN2007'd-high=[monyy7.]
+      .='None';
+run;
+
+proc freq data=orion.employee_payroll;
+   tables Employee_Term_Date/missing;
+   title 'Employee Status Report';
+   format Employee_Term_Date userdate.;
+run;
+
+
+/*10_01 Subsetting and Grouping Observations*/
+libname orion "/courses/d0f434e5ba27fe300/s5066/prg1" access=readonly;
+proc sort data=orion.order_fact out=work.order_fact;
+by Order_Type ;
+run;
+
+proc means data=work.order_fact;
+   var Total_Retail_Price;
+   by Order_Type;
+   where Order_Type=2 or Order_Type=3;
+   title 'Orion Star Sales Summary';
+run;
+
+
+/*11_02 Subsetting and Grouping by Multiple Variables*/
+libname orion "/courses/d0f434e5ba27fe300/s5066/prg1" access=readonly;
+proc sort data=orion.order_fact out =work.order_fact;
+by Order_Type descending Order_Date;
+run;
+proc print data=work.order_fact;
+   var Order_ID Order_Date Delivery_Date ;
+   by Order_Type notsorted;
+   where Order_Date between '01JAN2005'd and '30Apr2005'd and
+         Delivery_Date-Order_Date=2;
+   title1 'Orion Star Sales Details';
+   title2 '2-Day Deliveries from January to April 2005';
+run;
+
+
+
+/*12_03 Adding Subsetting Conditions*/
+libname orion "/courses/d0f434e5ba27fe300/s5066/prg1" access=readonly;
+
+proc format;
+   value $country
+      "CA"="Canada"
+      "DK"="Denmark"
+      "ES"="Spain"
+      "GB"="Great Britain"
+      "NL"="Netherlands"
+      "SE"="Sweden"
+      "US"="United States";
+run;
+
+proc sort data=orion.shoe_vendors out=vendors_by_country;
+   by Supplier_Country Supplier_Name;
+run;
+
+proc print data=vendors_by_country;
+   where Product_Line=21;
+   where same and Product_Name contains 'Street' or Product_Name contains 'Running';
+   by Supplier_Name Supplier_ID  Supplier_Country notsorted;
+   var Product_ID Product_Name;
+   title1 'Orion Star Products: Children Sports';
+run;
+
+
