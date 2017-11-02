@@ -1,173 +1,106 @@
 /*Hui Yuan*/
 /*I certify that this submission contains only my own work.*/
 
-/*01_01Outputting Multiple Observations*/
-libname orion "/courses/d0f434e5ba27fe300/s5066/prg2" ;
-
-data work.price_increase;
-   set orion.prices;
-   Year=1;
-   Unit_Price=Unit_Price*Factor;
-   output;
-   Year=2;
-   Unit_Price=Unit_Price*Factor;
-   output;
-   Year=3;
-   Unit_Price=Unit_Price*Factor;
-   output;
-   keep Product_ID Unit_Price Year; 
+/*01_01 Using Formatted Input*/
+filename sales1 '/courses/d0f434e5ba27fe300/s5066/RawData/sales1.dat';
+data work.sales_staff;
+  infile sales1;
+  input  @1 Employee_ID 6. 
+         @21 Last_Name $18.
+         @43 Job_Title $20.
+         @64 Salary comma8.
+         @87 Hire_Date MMDDYY10.;
 run;
-proc print data=work.price_increase;
-title 'Forecast unit prices for the next three years';
+proc print data=sales_staff noobs;
+title 'Australian and US Sales Staff';
 run;
 
 
-/*02_02Outputting Multiple Observations*/
-libname orion "/courses/d0f434e5ba27fe300/s5066/prg2" ;
-
-data work.extended;
-   set orion.discount;
-   where Start_Date='01Dec2007'd;
-   Promotion='Happy Holidays';
-   Season='Winter';
-   output;
-   Promotion='Happy Holidays';
-   Start_Date='01Jul2008'd;
-   End_Date='31Jul2008'd;
-   Season='Summer';
-   output;
-   drop Unit_Sales_Price ;
- run;
-
-proc print data=work.extended;
-title 'Discounts from the Happy Holidays promotion';
+/*02_02 Using Formatted Input and Subsetting IF*/
+filename sales1 '/courses/d0f434e5ba27fe300/s5066/RawData/sales1.dat';
+data work.AU_trainees work.US_trainees;
+ infile sales1;
+ input @1 Employee_ID 6. 
+       @21 Last_Name $18.
+       @43 Job_Title $20.
+       @64 Salary comma8.
+       @73 Country $2.
+       @87 Hire_Date MMDDYY10.;
+if Country='AU' and Job_Title='Sales Rep. I' then
+output AU_trainees;
+else if Country='US' and Job_Title='Sales Rep. I' then
+output US_trainees;
 run;
 
-/*03_03Using Conditional Logic to Output Multiple Observations*/
-libname orion "/courses/d0f434e5ba27fe300/s5066/prg2" ;
-data work.lookup;
- set orion.country;
-  Outdated='N';
-  output;
-  if Country_FormerName ^= null then do Outdated='Y';
-  Country_Name=Country_FormerName;
-  output;
-  end;
-  drop Country_FormerName Population null;
-run;
-
-proc print data=work.lookup;
- title 'Country Names and Lookup Codes';
-run;
- 
-
-/*04_01Creating Multiple SAS Data Sets*/
-libname orion "/courses/d0f434e5ba27fe300/s5066/prg2" ;
-
-data work.admin work.stock work.purchasing other;
- set orion.employee_organization;
- if Department='Administration' then output work.admin;
- else if Department='Stock & Shipping' then output work.stock;
- else if Department='Purchasing' then output work.purchasing;
- else output other;
-run;
-
-proc print data=work.admin;
-title 'Employees from administrative department';
-run;
-proc print data=work.stock;
-title 'Employees from stock & shipping department';
-run;
-proc print data=work.purchasing;
-title 'Employees from purchasing department';
+proc print data=AU_trainees(drop=Country) noobs;
+title 'Austrtalian trainees';
+run; 
+proc print data=US_trainees(drop=Country) noobs;
+title 'U.S. trainees';
 run;
 
 
-/*05_02Creating Multiple SAS Data Sets with Derived Values*/
-libname orion "/courses/d0f434e5ba27fe300/s5066/prg2" ;
-data work.fast work.slow work.veryslow other;
-  set orion.orders;
-  where Order_Type=2 or Order_Type=3 ;
-  ShipDays= Delivery_Date-Order_Date;
-   if (ShipDays <3) then output work.fast;
-   else if (ShipDays>=5 and ShipDays<=7) then output work.slow;
-   else if (ShipDays >7) then output work.veryslow;
-   else output other;
-  drop Employee_ID;
+/*03_03 Using a Text String with Column Pointer Controls*/
+filename seminar '/courses/d0f434e5ba27fe300/s5066/RawData/seminar.dat';
+
+data work.seminar_ratings;
+ infile seminar;
+ input @1 Name $15.
+       @'Rating:' Rating 1. ;
 run;
 
-proc print data=work.veryslow;
-title 'Orders that deliver very slow';
+proc print data=seminar_ratings;
+title 'Names and Ratings';
+run;  
+
+/*04_01 Reading Multiple Input Records per Observation*/
+filename sales2 '/courses/d0f434e5ba27fe300/s5066/RawData/sales2.dat';
+data work.sales_staff2;
+ infile sales2;
+ input @1 Employee_ID 6.
+       @21 Last_Name $18.;
+ input @1 Job_Title $20.
+       @22 Hire_Date mmddyy10.
+       @33 Salary comma8.;
+ input;
+run;
+
+proc print data= sales_staff2 noobs;
+title 'Australian and US Sales Staff';
+run;
+
+/*05_02 Working with Mixed Record Types*/
+filename sales3 '/courses/d0f434e5ba27fe300/s5066/RawData/sales3.dat';
+data work.AU_sales;
+ infile sales3;
+ input  @1 Employee_ID 6. 
+         @21 Last_Name $18.
+         @43 Job_Title $20. /
+         @1 Salary comma8. 
+         @10 Country $2. @;
+ if Country='AU';
+ input @24 Hire_Date DDMMYY10.;
+run;
+
+proc print data=AU_sales(drop=Country) noobs;
+title 'Australian Sales Staff';
+run;
+
+data work.US_sales;
+ infile sales3;
+ input  @1 Employee_ID 6. 
+         @21 Last_Name $18.
+         @43 Job_Title $20. /
+         @1 Salary comma8. 
+         @10 Country $2. @;
+ if Country='US';
+ input @24 Hire_Date MMDDYY10.;
+run;
+
+proc print data=US_sales(drop=Country) noobs;
+title 'US Sales Staff';
 run;
 
 
-/*06_03Using a SELECT Group*/
-libname orion "/courses/d0f434e5ba27fe300/s5066/prg2" ;
-data work.fast work.slow work.veryslow other;
-  set orion.orders;
-  where Order_Type=2 or Order_Type=3;
-  ShipDays= Delivery_Date-Order_Date;
-  select;
-  when (ShipDays <3) output work.fast;
-  when (ShipDays>=5 and ShipDays<=7) output work.slow;
-  when (ShipDays >7) output work.veryslow;
-  otherwise output other;
-  end;
-  drop Employee_ID;
-run;
-
-proc print data=work.veryslow;
-title 'Orders that deliver very slow';
-run;
-
-
-/*07_01Specifying Variables and Observations*/
-libname orion "/courses/d0f434e5ba27fe300/s5066/prg2" ;
-
-data work.sales(keep=Employee_ID Job_Title Manager_ID) 
-     work.exec(keep=Employee_ID Job_Title)
-     other;
- set orion.employee_organization;
- if Department='Sales' then output work.sales;
- else if Department='Executives' then output work.exec;
- else output other;
-run;
-
-proc print data=work.sales(obs=6);
-title 'Employees from sales department';
-run;
-proc print data=work.exec(firstobs=2 obs=3);
-title 'Employees from executives department';
-run;
-
-
-/*08_02Specifying Variables and Observations*/
-libname orion "/courses/d0f434e5ba27fe300/s5066/prg2" ;
-
-data work.instore(keep=Order_ID Customer_ID Order_Date)
-     work.delivery(keep=Order_ID Customer_ID Order_Date ShipDays);
- set orion.orders;
- where Order_Type=1; 
- ShipDays= Delivery_Date-Order_Date;
- if ShipDays=0 then output work.instore;
- else output work.delivery;
-run;
-
-proc print data=orion.orders;
-title 'Information of all orders';
-run;
-proc print data=work.instore;
-title 'In-store oder information';
-run;
-proc print data=work.delivery;
-title 'Information of orders that on delivery';
-run;
-
-title 'In-stock Store Purchases, By Year';
-proc freq data=instore;
-  tables Order_Date;
-  format Order_Date year.;
-run;
-title;
 
 
